@@ -1,4 +1,5 @@
 require('dotenv').config();
+const cors = require('cors');
 const express = require('express');
 const mongoose = require('mongoose');
 const User = require('./models/User.js');
@@ -6,6 +7,15 @@ var passport = require('passport');
 const session = require('express-session');
 var GoogleStrategy = require('passport-google-oauth20').Strategy;
 const app = express();
+
+// MIDDLEWARE
+app.use(
+  cors({
+    origin: 'http://localhost:3000',
+    methods: 'GET,POST,PUT,DELETE',
+    credentials: true,
+  })
+);
 
 app.use(
   session({
@@ -46,6 +56,7 @@ passport.use(
   )
 );
 
+// CONNECT TO MONGODB ATLAS CLUSTER
 try {
   const uri = process.env.MONGODB_CLIENT_ID;
   mongoose.connect(
@@ -60,6 +71,24 @@ try {
   console.error(error);
 }
 
+// AUTH ROUTES
+app.get('/auth/login/success', function (req, res) {
+  if (req.user) {
+    res.status(200).json({
+      success: true,
+      message: 'successful',
+      user: req.user,
+    });
+  }
+});
+
+app.get('/auth/login/failed', (req, res) => {
+  res.status(401).json({
+    success: false,
+    message: 'login failure',
+  });
+});
+
 app.get(
   '/auth/google',
   passport.authenticate('google', { scope: ['profile'] })
@@ -68,7 +97,7 @@ app.get(
 app.get(
   '/auth/google/redirect',
   passport.authenticate('google', {
-    failureRedirect: 'http://localhost:3000/',
+    failureRedirect: '/login/failed',
   }),
   function (req, res) {
     res.redirect('http://localhost:3000/dashboard');
